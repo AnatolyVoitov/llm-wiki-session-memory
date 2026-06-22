@@ -46,7 +46,33 @@ Then add this extension:
 ```text
 raw/sessions/
 wiki/session-handoff.md
+commands/save-memory.md
 ```
+
+If the base project does not support project-local slash command files, still create
+`commands/save-memory.md` and document in `AGENTS.md` that `/save-memory` should be
+treated as a chat command.
+
+## Project Bootstrap Workflow
+
+Use this when adding the extension to a new project.
+
+1. Read `AGENTS.md` and `wiki/index.md`.
+2. Create missing directories:
+   - `raw/sessions/`
+   - `commands/`
+3. Create `wiki/session-handoff.md` if missing.
+4. Create `commands/save-memory.md` from this repository's template.
+5. Update `AGENTS.md` with these rules:
+   - read `wiki/session-handoff.md` after `wiki/index.md` on startup;
+   - do not read all of `wiki/log.md` by default;
+   - do not read `raw/sessions/` by default;
+   - treat `/save-memory` as the end-of-chat memory save command.
+6. Update `wiki/index.md` to link `wiki/session-handoff.md`.
+7. Append one compact setup entry to `wiki/log.md`.
+
+Do not create a real `.env`, secrets, provider integrations, vector database, or
+automation during bootstrap.
 
 ## Four Memory Layers
 
@@ -78,6 +104,13 @@ At the end of a meaningful chat:
 4. Update relevant maintained wiki pages.
 5. Rewrite `wiki/session-handoff.md` with current active context.
 6. Append one compact entry to `wiki/log.md` linking to the raw session and updated wiki pages.
+
+Equivalent trigger phrases:
+
+- `/save-memory`
+- `save memory`
+- `update wiki memory`
+- `сохрани сессию`
 
 ## Handoff Rules
 
@@ -156,6 +189,7 @@ Recommended entry:
 A project is using this skill correctly when:
 
 - a new chat can resume by reading `wiki/index.md` and `wiki/session-handoff.md`;
+- the user can type `/save-memory` at the end of a chat and get the shutdown workflow;
 - `wiki/log.md` remains compact and audit-oriented;
 - `raw/sessions/` stores recoverable detail without becoming default context;
 - durable decisions live in maintained wiki pages;

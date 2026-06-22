@@ -50,7 +50,30 @@ This extension adds:
 ```text
 raw/sessions/
 wiki/session-handoff.md
+commands/save-memory.md
 ```
+
+## Reusable Project Command
+
+The repository includes templates for adding a local `/save-memory` command to
+new projects:
+
+```text
+templates/commands/save-memory.md
+templates/wiki/session-handoff.md
+templates/raw/sessions/.gitkeep
+templates/AGENTS-snippet.md
+```
+
+After bootstrap, the user can end a meaningful chat with:
+
+```text
+/save-memory
+```
+
+The agent should save a raw transcript or faithful summary, update durable wiki
+pages, rewrite `wiki/session-handoff.md`, and append one compact `wiki/log.md`
+entry.
 
 ## Skill
 

@@ -1,4 +1,4 @@
 interface:
   display_name: "LLM Wiki Session Memory"
   short_description: "Token-efficient session handoffs"
-  default_prompt: "Use $llm-wiki-session-memory to add token-efficient session handoffs to this Karpathy-style LLM Wiki project."
+  default_prompt: "Use $llm-wiki-session-memory to add token-efficient session handoffs and a /save-memory project command to this Karpathy-style LLM Wiki project."
