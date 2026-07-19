@@ -1,12 +1,12 @@
 ---
-description: "Save durable session knowledge into the project wiki memory"
+description: "Prepare a validated, tagged session record for the project LLM Wiki"
 ---
 
-# /save-memory
+# Save Memory
 
 Save this session into project memory.
 
-Follow the local memory workflow:
+Follow the local memory workflow and use `/prompts:save-memory` in Codex when available.
 
 1. Read `AGENTS.md`.
 2. Read `wiki/index.md`.
@@ -22,8 +22,11 @@ Follow the local memory workflow:
    - changed files
    - commands and verification results
 6. Ignore raw chat, temporary reasoning, secrets, credentials, and private data.
-7. Save a full transcript or faithful session summary under `raw/sessions/` when available.
-8. Update the smallest relevant maintained files:
+7. Create a JSON payload that includes required ISO-8601 timestamps with timezone, agent, task, status, transcript source, summary, changed files, verification and tags.
+8. Use typed tags: one `activity:` value from the controlled vocabulary, plus useful `task:`, `component:`, `file:`, `topic:` and `status:` values. Add `file:` for every materially changed file.
+9. Run `python3 .agents/skills/llm-wiki-session-memory/scripts/save_memory.py . /path/to/session.json`.
+10. Run `python3 .agents/skills/llm-wiki-session-memory/scripts/lint_memory.py .`.
+11. Update the smallest relevant maintained files:
    - `wiki/session-handoff.md` for active continuity
    - `PROGRESS.md` for status and next step
    - `PLAN.md` for plan changes
@@ -33,8 +36,6 @@ Follow the local memory workflow:
    - `wiki/entities/` for entities
    - `wiki/syntheses/` for integrated understanding
    - `wiki/dev/decisions.md` or `wiki/decisions.md` for durable decisions
-9. Update `wiki/index.md` if pages were added.
-10. Append one compact entry to `wiki/log.md`.
-11. Run available project self-checks.
-12. Report changed files and what was intentionally ignored.
-
+12. Update `wiki/index.md` if pages were added.
+13. Run available project self-checks.
+14. Report changed files and what was intentionally ignored.

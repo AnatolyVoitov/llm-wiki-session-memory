@@ -1,0 +1,5 @@
+activity:
+  allowed: [research, implementation, debugging, refactoring, documentation, testing, planning, review, configuration]
+status:
+  allowed: [completed, partial, needs-review, blocked, abandoned]
+namespaces: [project, task, activity, component, file, topic, decision, status, source, person]

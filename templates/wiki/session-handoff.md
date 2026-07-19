@@ -4,6 +4,7 @@
 
 - Current project or topic:
 - Current objective:
+- Last session record:
 - Current branch/worktree, if relevant:
 
 ## Current Decisions
@@ -25,4 +26,4 @@
 ## Relevant Pages
 
 - `wiki/index.md`
-
+- `wiki/session-index.jsonl` (query through scripts only)

@@ -1,6 +1,6 @@
-# LLM Wiki Session Memory Snippet
+# LLM Wiki Session Memory
 
-Add this to `AGENTS.md` when installing the extension.
+Add this to `AGENTS.md` when installing the skill.
 
 ## Session Memory
 
@@ -9,12 +9,13 @@ Add this to `AGENTS.md` when installing the extension.
 - Treat `wiki/log.md` as compact audit, not default startup memory.
 - Do not read `raw/sessions/` by default.
 - Store full transcripts or faithful session summaries under `raw/sessions/` only when saving a session.
-- Treat `/save-memory`, `save memory`, `update wiki memory`, and `сохрани сессию` as end-of-chat memory save commands.
+- Treat `/prompts:save-memory`, `$llm-wiki-session-memory`, `save memory`, `update wiki memory`, and `сохрани сессию` as memory-save triggers.
+- Keep `raw/sources/` and `raw/sessions/` immutable after creation.
+- Use `wiki/session-index.jsonl` only through the bundled scripts; do not edit it manually.
 
 When saving memory:
 
-1. Extract durable facts, decisions, contradictions, open tasks, changed files, commands, checks, blockers, and next actions.
-2. Update relevant maintained wiki pages.
-3. Rewrite `wiki/session-handoff.md`.
-4. Append one compact entry to `wiki/log.md`.
-
+1. Extract only durable facts, decisions, contradictions, open tasks, changed files, checks, blockers and next actions; omit secrets and private data.
+2. Add required metadata and typed tags according to `references/session-schema.md` and `references/tagging.md`.
+3. Run `save_memory.py` and `lint_memory.py`.
+4. Update relevant maintained Wiki pages.
