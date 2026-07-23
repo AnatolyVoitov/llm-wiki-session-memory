@@ -30,12 +30,17 @@ def lint(project: Path) -> list[str]:
                 continue
             try:
                 row = json.loads(line)
-                actual[row["id"]] = row
-            except (json.JSONDecodeError, KeyError) as exc:
+                identifier = row["id"]
+                if identifier in actual:
+                    errors.append(f"duplicate index record for {identifier}")
+                actual[identifier] = row
+            except (json.JSONDecodeError, KeyError, TypeError) as exc:
                 errors.append(f"index line {number}: {exc}")
     for identifier, record in expected.items():
         if actual.get(identifier) != record:
             errors.append(f"index drift for {identifier}")
+    for identifier in sorted(set(actual) - set(expected)):
+        errors.append(f"stale index record for {identifier}")
     return errors
 
 
