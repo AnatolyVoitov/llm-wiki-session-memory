@@ -34,11 +34,21 @@ def lint(project: Path) -> list[str]:
     return errors
 
 
+def strict_errors(project: Path) -> list[str]:
+    from audit_content import audit
+
+    return [f"{item['code']}: {item['message']} ({item['card_id']})" for item in audit(project) if item["severity"] == "error"]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("project", type=Path)
+    parser.add_argument("--strict", action="store_true", help="also fail on content-audit errors")
     args = parser.parse_args()
-    errors = lint(args.project.resolve())
+    project = args.project.resolve()
+    errors = lint(project)
+    if args.strict:
+        errors.extend(strict_errors(project))
     if errors:
         print("\n".join(f"error: {error}" for error in errors), file=sys.stderr)
         raise SystemExit(1)

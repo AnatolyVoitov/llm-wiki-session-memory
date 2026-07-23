@@ -32,8 +32,8 @@ class MemoryCliTests(unittest.TestCase):
             card.write_text(
                 "---\n"
                 'schema_version: 2\n'
-                'id: "skill.design"\n'
-                'type: "skill"\n'
+                'id: "source.design"\n'
+                'type: "source"\n'
                 'title: "Design"\n'
                 'description: "Website design guidance."\n'
                 'tags: ["domain:web-design"]\n'
@@ -57,8 +57,8 @@ class MemoryCliTests(unittest.TestCase):
             card.parent.mkdir()
             card.write_text(
                 "---\n"
-                'id: "skill.design"\n'
-                'type: "skill"\n'
+                'id: "source.design"\n'
+                'type: "source"\n'
                 'title: "Design"\n'
                 'description: "Website design guidance."\n'
                 'tags: ["domain:web-design"]\n'
@@ -83,8 +83,8 @@ class MemoryCliTests(unittest.TestCase):
             card.parent.mkdir()
             card.write_text(
                 "---\n"
-                'id: "skill.design"\n'
-                'type: "skill"\n'
+                'id: "source.design"\n'
+                'type: "source"\n'
                 'title: "Design"\n'
                 'description: "Website design guidance."\n'
                 'tags: ["domain:web-design"]\n'
@@ -126,6 +126,38 @@ class MemoryCliTests(unittest.TestCase):
             first = card.read_text(encoding="utf-8")
             run("migrate_content_cards.py", project, "--upgrade-schema")
             self.assertEqual(card.read_text(encoding="utf-8"), first)
+
+    def test_audit_reports_weak_metadata_without_mutating_card(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            card = project / "wiki" / "skills" / "design.md"
+            card.parent.mkdir()
+            card.write_text(
+                "---\n"
+                'schema_version: 2\n'
+                'id: "source.design"\n'
+                'type: "source"\n'
+                'title: "Design"\n'
+                'description: "Maintained source card: Design."\n'
+                'tags: ["topic:design"]\n'
+                'source: {"wiki_path": "wiki/sources/design.md"}\n'
+                'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                'relations: [{"type": "related-to", "target": "skill.other"}]\n'
+                'aliases: []\n'
+                'status: "active"\n'
+                "---\n\n# Design\n",
+                encoding="utf-8",
+            )
+            before = card.read_text(encoding="utf-8")
+            result = run("audit_content.py", project, "--format", "json")
+            findings = json.loads(result.stdout)
+            codes = {finding["code"] for finding in findings}
+            self.assertTrue({"generic-description", "generated-only-tags", "generic-relation", "missing-external-source"} <= codes)
+            self.assertEqual(card.read_text(encoding="utf-8"), before)
+            strict = run("lint_content.py", project, "--strict", check=False)
+            self.assertNotEqual(strict.returncode, 0)
+            self.assertIn("missing-external-source", strict.stderr)
 
     def test_content_index_query_and_lint(self):
         with tempfile.TemporaryDirectory() as tmp:
