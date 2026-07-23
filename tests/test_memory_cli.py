@@ -59,7 +59,7 @@ class MemoryCliTests(unittest.TestCase):
             self.assertIn("missing-symmetric-relation: missing complements relation from skill.second to skill.first", result.stderr)
             self.assertEqual(result.stderr.count("missing-symmetric-relation: missing complements relation from skill.second to skill.first"), 1)
 
-    def test_strict_lint_reports_replaces_without_supported_inverse_type(self):
+    def test_strict_lint_reports_missing_replaced_by_inverse(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp)
             run("bootstrap.py", project)
@@ -68,7 +68,28 @@ class MemoryCliTests(unittest.TestCase):
             run("rebuild_content_index.py", project)
             result = run("lint_content.py", project, "--strict", check=False)
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("missing-inverse-relation: replaces relation from skill.new to skill.old has no supported replaced-by inverse", result.stderr)
+            self.assertIn("missing-inverse-relation: replaces relation from skill.new to skill.old has no replaced-by inverse", result.stderr)
+
+    def test_strict_lint_accepts_reciprocal_replacement_relations(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            self.write_card(project, "skill.new", "skill", [{"type": "replaces", "target": "skill.old"}])
+            self.write_card(project, "skill.old", "skill", [{"type": "replaced-by", "target": "skill.new"}])
+            run("rebuild_content_index.py", project)
+            result = run("lint_content.py", project, "--strict", check=False)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_strict_lint_reports_missing_replaces_inverse(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            self.write_card(project, "skill.old", "skill", [{"type": "replaced-by", "target": "skill.new"}])
+            self.write_card(project, "skill.new", "skill", [])
+            run("rebuild_content_index.py", project)
+            result = run("lint_content.py", project, "--strict", check=False)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("missing-inverse-relation: replaced-by relation from skill.old to skill.new has no replaces inverse", result.stderr)
 
     def test_strict_lint_reports_isolated_important_card_but_not_entity(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -585,6 +606,57 @@ class MemoryCliTests(unittest.TestCase):
             result = run("save_memory.py", project, payload_file, check=False)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("started_at", result.stderr)
+
+    def test_save_rejects_multiple_activity_tags(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            payload = {
+                "started_at": "2026-07-18T10:00:00+03:00",
+                "ended_at": "2026-07-18T11:00:00+03:00",
+                "timezone": "Asia/Jerusalem",
+                "agent": "codex",
+                "task": "Validate activities",
+                "status": "completed",
+                "transcript_source": "faithful-summary",
+                "summary": "Attempted invalid activity tags.",
+                "files_changed": [],
+                "tags": ["activity:testing", "activity:review"],
+                "verification": [],
+            }
+            payload_file = project / "session.json"
+            payload_file.write_text(json.dumps(payload), encoding="utf-8")
+            result = run("save_memory.py", project, payload_file, check=False)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("exactly one activity:<value> tag", result.stderr)
+
+    def test_memory_lint_reports_stale_and_duplicate_index_records(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            payload = {
+                "started_at": "2026-07-18T10:00:00+03:00",
+                "ended_at": "2026-07-18T11:00:00+03:00",
+                "timezone": "Asia/Jerusalem",
+                "agent": "codex",
+                "task": "Check index integrity",
+                "status": "completed",
+                "transcript_source": "faithful-summary",
+                "summary": "Created a valid session.",
+                "files_changed": [],
+                "tags": ["activity:testing"],
+                "verification": [],
+            }
+            payload_file = project / "session.json"
+            payload_file.write_text(json.dumps(payload), encoding="utf-8")
+            run("save_memory.py", project, payload_file)
+            index = project / "wiki/session-index.jsonl"
+            valid_row = index.read_text(encoding="utf-8")
+            index.write_text(valid_row + valid_row + '{"id":"ghost"}\n', encoding="utf-8")
+            result = run("lint_memory.py", project, check=False)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("duplicate index record for", result.stderr)
+            self.assertIn("stale index record for ghost", result.stderr)
 
     def test_query_filters_yesterday_tag_file_and_status(self):
         with tempfile.TemporaryDirectory() as tmp:
