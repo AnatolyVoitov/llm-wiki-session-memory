@@ -690,5 +690,48 @@ class MemoryCliTests(unittest.TestCase):
                 self.assertIn("Fix search", result.stdout)
 
 
+    def test_bootstrap_creates_media_directories(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            self.assertTrue((project / "raw/assets").is_dir())
+            self.assertTrue((project / "wiki/assets").is_dir())
+
+    def test_media_proposal_discovers_markdown_html_and_youtube_without_writes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            source = project / "raw/sources/media.md"
+            source.write_text("# Context\n\n![Layers](figures/layers.png)\n\n<img src=\"figures/html.png\" alt=\"HTML figure\">\n\nhttps://youtu.be/dQw4w9WgXcQ\n", encoding="utf-8")
+            proposal = project / "wiki/curation/media.json"
+            run("propose_media_curation.py", project, source, "--output", proposal)
+            data = json.loads(proposal.read_text(encoding="utf-8"))
+            self.assertEqual([item["kind"] for item in data["candidates"]], ["image", "image", "youtube"])
+            self.assertEqual(list((project / "wiki/assets").glob("*.md")), [])
+
+    def test_apply_media_curation_creates_asset_card_and_article_embed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            self.write_card(project, "concepts.media", "concept", [])
+            article = project / "wiki/cards/concepts-media.md"
+            article.write_text(article.read_text(encoding="utf-8") + "\n## Context\n\nText.\n", encoding="utf-8")
+            source = project / "raw/sources/media.md"
+            source.write_text("# Context\n\n![Layers](figures/layers.png)\n", encoding="utf-8")
+            figure = project / "raw/sources/figures/layers.png"
+            figure.parent.mkdir()
+            figure.write_bytes(b"png")
+            proposal = project / "wiki/curation/media.json"
+            run("propose_media_curation.py", project, source, "--output", proposal)
+            data = json.loads(proposal.read_text(encoding="utf-8"))
+            data["updates"] = [{"article_id": "concepts.media", "asset_id": "assets.media-layers", "candidate_id": "media-001", "placement": "inline", "caption": "Memory layers.", "tags": ["topic:memory"]}]
+            proposal.write_text(json.dumps(data), encoding="utf-8")
+            run("apply_media_curation.py", project, proposal, "--approve", "assets.media-layers")
+            self.assertTrue((project / "raw/assets/media/layers.png").exists())
+            self.assertTrue((project / "wiki/assets/media-layers.md").exists())
+            self.assertIn("![[raw/assets/media/layers.png|680]]", article.read_text(encoding="utf-8"))
+            run("lint_content.py", project, "--strict")
+
+
 if __name__ == "__main__":
     unittest.main()
