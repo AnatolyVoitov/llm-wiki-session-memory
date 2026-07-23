@@ -20,7 +20,7 @@ SUPPORTED_SCHEMA_VERSIONS = {1, 2}
 CONTENT_TYPES = {"skill", "article", "repository", "tool", "project", "entity", "concept", "source", "synthesis", "question", "image", "diagram", "document"}
 CONTENT_STATUSES = {"active", "draft", "archived", "superseded"}
 RELATION_TYPES = {
-    "related-to", "complements", "depends-on", "derived-from", "applies-to", "replaces",
+    "related-to", "complements", "depends-on", "derived-from", "applies-to", "replaces", "replaced-by",
     "references", "contains", "describes", "supports",
 }
 CONTENT_REQUIRED_FIELDS = ("id", "type", "title", "description", "tags", "source", "dates", "relations", "aliases", "status")
@@ -63,8 +63,9 @@ def validate_session(data: dict) -> None:
         raise ValueError("tags must be a non-empty list")
     for tag in data["tags"]:
         validate_tag(tag)
-    if not any(tag.startswith("activity:") for tag in data["tags"]):
-        raise ValueError("tags must include one activity:<value> tag")
+    activity_tags = [tag for tag in data["tags"] if tag.startswith("activity:")]
+    if len(activity_tags) != 1:
+        raise ValueError("tags must include exactly one activity:<value> tag")
     if not isinstance(data["verification"], list):
         raise ValueError("verification must be a list")
     for field in OPTIONAL_SESSION_LIST_FIELDS:
