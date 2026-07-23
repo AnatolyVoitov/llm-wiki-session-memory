@@ -167,6 +167,27 @@ def build_content_index(project: Path) -> list[dict]:
     return records
 
 
+def write_content_index(project: Path) -> list[dict]:
+    records = build_content_index(project)
+    project_paths(project)["content_index"].write_text(
+        "".join(json.dumps(record, ensure_ascii=False) + "\n" for record in records),
+        encoding="utf-8",
+    )
+    return records
+
+
+def render_content_frontmatter(data: dict) -> str:
+    return "---\n" + "\n".join(f"{key}: {json.dumps(value, ensure_ascii=False)}" for key, value in data.items()) + "\n---\n\n"
+
+
+def content_body(path: Path) -> str:
+    content = path.read_text(encoding="utf-8")
+    close = content.find("\n---\n", 4)
+    if close < 0:
+        raise ValueError(f"{path} has unclosed metadata front matter")
+    return content[close + 5:]
+
+
 def slug(value: str) -> str:
     result = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
     return result[:48] or "session"

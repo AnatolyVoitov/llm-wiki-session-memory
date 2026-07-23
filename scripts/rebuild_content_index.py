@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 from bootstrap import bootstrap
-from wiki_memory import build_content_index, project_paths
+from wiki_memory import write_content_index
 
 
 def main() -> None:
@@ -19,9 +19,7 @@ def main() -> None:
     try:
         project = args.project.resolve()
         bootstrap(project)
-        records = build_content_index(project)
-        index = project_paths(project)["content_index"]
-        index.write_text("".join(json.dumps(record, ensure_ascii=False) + "\n" for record in records), encoding="utf-8")
+        records = write_content_index(project)
         print(f"indexed {len(records)} content cards")
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"error: {exc}", file=sys.stderr)

@@ -159,6 +159,79 @@ class MemoryCliTests(unittest.TestCase):
             self.assertNotEqual(strict.returncode, 0)
             self.assertIn("missing-external-source", strict.stderr)
 
+    def test_curation_proposal_does_not_modify_cards(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            card = project / "wiki" / "skills" / "design.md"
+            card.parent.mkdir()
+            card.write_text(
+                "---\n"
+                'schema_version: 2\n'
+                'id: "skill.design"\n'
+                'type: "skill"\n'
+                'title: "Design"\n'
+                'description: "Maintained skill card: Design."\n'
+                'tags: ["topic:design"]\n'
+                'source: {"url": "https://example.com/design"}\n'
+                'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                'relations: []\n'
+                'aliases: []\n'
+                'status: "active"\n'
+                "---\n\n# Design\n",
+                encoding="utf-8",
+            )
+            before = card.read_text(encoding="utf-8")
+            proposal = project / "wiki" / "curation" / "proposal.json"
+            run("propose_content_curation.py", project, "--output", proposal)
+            self.assertTrue(proposal.exists())
+            self.assertIn("skill.design", proposal.read_text(encoding="utf-8"))
+            self.assertEqual(card.read_text(encoding="utf-8"), before)
+
+    def test_apply_curation_changes_only_explicitly_approved_ids(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            skills = project / "wiki" / "skills"
+            skills.mkdir()
+            for identifier in ("design", "other"):
+                (skills / f"{identifier}.md").write_text(
+                    "---\n"
+                    'schema_version: 2\n'
+                    f'id: "skill.{identifier}"\n'
+                    'type: "skill"\n'
+                    f'title: "{identifier.title()}"\n'
+                    'description: "Useful guidance."\n'
+                    'tags: ["topic:skills"]\n'
+                    f'source: {{"wiki_path": "wiki/skills/{identifier}.md"}}\n'
+                    'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                    'relations: []\n'
+                    'aliases: []\n'
+                    'status: "active"\n'
+                    "---\n\n# Card\n",
+                    encoding="utf-8",
+                )
+            proposal = project / "proposal.json"
+            proposal.write_text(
+                json.dumps(
+                    {
+                        "proposal_version": 1,
+                        "updates": [
+                            {"id": "skill.design", "tags": ["domain:web-design"], "aliases": ["website design"]},
+                            {"id": "skill.other", "tags": ["domain:ai-agents"]},
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            run("apply_content_curation.py", project, proposal, "--approve", "skill.design")
+            design = (skills / "design.md").read_text(encoding="utf-8")
+            other = (skills / "other.md").read_text(encoding="utf-8")
+            self.assertIn("domain:web-design", design)
+            self.assertIn("website design", design)
+            self.assertNotIn("domain:ai-agents", other)
+            run("lint_content.py", project)
+
     def test_content_index_query_and_lint(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp)
