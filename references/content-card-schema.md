@@ -28,6 +28,10 @@ Run `audit_content.py` to identify weak metadata, create a review file with `pro
 
 `status` must be one of: `active`, `draft`, `archived`, `superseded`.
 
+## Media asset cards
+
+Use `image`, `diagram`, or `document` for curated media under `wiki/assets/`. Each card cites its immutable `raw/assets/...` file through `source.raw_path`; article placement adds a semantic `references` relation to the asset, while the asset uses `supports` back to the article.
+
 ## Relation rules
 
 `complements` and legacy `related-to` are symmetric: strict lint requires the target card to store the same relation back. `replaces` and `replaced-by` are reciprocal: strict lint requires the target card to store the corresponding inverse, but never writes it. `derived-from`, `depends-on`, `applies-to`, `contains`, `describes`, `supports`, and `references` are directed and require no reverse edge.
