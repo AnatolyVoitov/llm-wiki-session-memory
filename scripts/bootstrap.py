@@ -20,7 +20,7 @@ def copy_if_missing(source: Path, target: Path) -> None:
 
 def bootstrap(project: Path) -> list[Path]:
     created = []
-    for directory in ("raw/sources", "raw/sessions", "wiki/sources", "wiki/concepts", "wiki/syntheses", "wiki/curation", "commands"):
+    for directory in ("raw/sources", "raw/sessions", "raw/assets", "wiki/sources", "wiki/concepts", "wiki/syntheses", "wiki/assets", "wiki/curation", "commands"):
         path = project / directory
         if not path.exists():
             path.mkdir(parents=True)
