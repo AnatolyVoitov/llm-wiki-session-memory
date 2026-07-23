@@ -1,5 +1,8 @@
 # LLM Wiki Session Memory
 
+Media-aware Markdown/HTML ingest can discover local images and YouTube links into a review-only proposal, then create approved Obsidian embeds and searchable asset cards while preserving originals in `raw/assets/`.
+
+
 A self-contained implementation of [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f), with structured session continuity for Codex and similar agents.
 
 It keeps evidence immutable, builds an agent-maintained Wiki, and makes past work recoverable by date, task, tag, status, or changed file — without a database or external service.
