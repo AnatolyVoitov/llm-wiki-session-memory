@@ -12,6 +12,7 @@ from wiki_memory import build_content_index, project_paths
 
 
 SYMMETRIC_RELATIONS = {"complements", "related-to"}
+INVERSE_RELATIONS = {"replaces": "replaced-by", "replaced-by": "replaces"}
 IMPORTANT_TYPES = {"skill", "project", "source", "repository", "concept", "synthesis"}
 
 
@@ -57,8 +58,9 @@ def graph_errors(project: Path) -> list[str]:
             seen.add(edge)
             if relation["type"] in SYMMETRIC_RELATIONS and (relation["target"], relation["type"], identifier) not in edges:
                 errors.append(f"missing-symmetric-relation: missing {relation['type']} relation from {relation['target']} to {identifier}")
-            if relation["type"] == "replaces" and (relation["target"], "replaced-by", identifier) not in edges:
-                errors.append(f"missing-inverse-relation: replaces relation from {identifier} to {relation['target']} has no supported replaced-by inverse")
+            inverse_type = INVERSE_RELATIONS.get(relation["type"])
+            if inverse_type and (relation["target"], inverse_type, identifier) not in edges:
+                errors.append(f"missing-inverse-relation: {relation['type']} relation from {identifier} to {relation['target']} has no {inverse_type} inverse")
         if record["type"] in IMPORTANT_TYPES and identifier not in connected:
             errors.append(f"isolated-important-card: important card has no relations ({identifier})")
     return errors
