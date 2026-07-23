@@ -380,6 +380,7 @@ class MemoryCliTests(unittest.TestCase):
                 "wiki/sources",
                 "wiki/concepts",
                 "wiki/syntheses",
+                "wiki/curation",
                 "wiki/index.md",
                 "wiki/log.md",
                 "wiki/session-handoff.md",
@@ -388,6 +389,7 @@ class MemoryCliTests(unittest.TestCase):
                 "commands/save-memory.md",
             ):
                 self.assertTrue((project / item).exists(), item)
+            self.assertIn("schema_version: 2", (project / "wiki/tag-taxonomy.yml").read_text(encoding="utf-8"))
 
     def test_save_creates_tagged_session_and_lint_accepts_it(self):
         with tempfile.TemporaryDirectory() as tmp:

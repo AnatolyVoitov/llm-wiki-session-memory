@@ -14,6 +14,7 @@
 - Use `wiki/log.md` as compact audit, not as startup context.
 - Give maintained knowledge pages content-card metadata and use `wiki/content-index.jsonl` only through the bundled scripts.
 - Rebuild and lint the content index after adding or changing knowledge cards.
+- Run `audit_content.py` before broad metadata cleanup. Generate a proposal under `wiki/curation/` and apply only explicitly approved card IDs.
 
 ## Session memory
 

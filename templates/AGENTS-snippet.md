@@ -15,6 +15,7 @@ Add this to `AGENTS.md` when installing the skill.
 - Give every maintained knowledge page a content-card header with `id`, `type`, `tags`, `source`, `dates`, `relations`, `aliases`, and `status`.
 - Use namespaced content tags such as `domain:web-design`, `capability:ui-design`, `workflow:implementation`, `topic:context-engineering`, and `tool:figma`.
 - After adding or changing cards, run `rebuild_content_index.py` and `lint_content.py`; never edit `wiki/content-index.jsonl` manually.
+- Use `audit_content.py` and `propose_content_curation.py` before broad cleanup. Apply only explicitly approved IDs through `apply_content_curation.py`.
 
 When saving memory:
 
