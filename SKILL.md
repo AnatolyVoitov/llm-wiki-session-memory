@@ -89,6 +89,22 @@ python3 .agents/skills/llm-wiki-session-memory/scripts/lint_content.py . --stric
 
 For a pre-existing Wiki without card metadata, run `migrate_content_cards.py` once before rebuilding the index. It adds baseline metadata only to pages without front matter and turns existing `[[Wiki links]]` into `related-to` relations.
 
+## Media-aware ingest
+
+For Markdown/HTML sources, discover local images and YouTube links without changing content:
+
+```text
+python3 scripts/propose_media_curation.py . raw/sources/article.md --output wiki/curation/article-media.json
+```
+
+Review and enrich the proposal with factual captions, tags, an article card ID, and an `inline` or `appendix` placement. Apply only approved asset IDs:
+
+```text
+python3 scripts/apply_media_curation.py . wiki/curation/article-media.json --approve assets.article-figure
+```
+
+The command imports approved local originals into `raw/assets/`, creates `wiki/assets/` cards, updates the article, and rebuilds the index. Discovery never writes to the Wiki.
+
 ## Ingest, query, lint
 
 - **Ingest:** preserve new evidence under `raw/sources/`; summarize it, update linked Wiki pages and `wiki/index.md`, then append `wiki/log.md`.
