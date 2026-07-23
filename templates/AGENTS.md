@@ -12,6 +12,8 @@
 - `raw/sources/` and `raw/sessions/` are immutable evidence.
 - `wiki/` is derived, maintained knowledge. Keep it concise, cross-linked, and grounded in raw evidence.
 - Use `wiki/log.md` as compact audit, not as startup context.
+- Give maintained knowledge pages content-card metadata and use `wiki/content-index.jsonl` only through the bundled scripts.
+- Rebuild and lint the content index after adding or changing knowledge cards.
 
 ## Session memory
 

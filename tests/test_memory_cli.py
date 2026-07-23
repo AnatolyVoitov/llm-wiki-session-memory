@@ -23,6 +23,114 @@ def run(script, *args, check=True):
 
 
 class MemoryCliTests(unittest.TestCase):
+    def test_content_index_query_and_lint(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            skills = project / "wiki" / "skills"
+            skills.mkdir()
+            (skills / "design.md").write_text(
+                "---\n"
+                'id: "skill.design-taste"\n'
+                'type: "skill"\n'
+                'title: "Design Taste"\n'
+                'description: "Website design guidance."\n'
+                'tags: ["domain:web-design", "capability:ui-design", "tool:figma", "topic:context-engineering"]\n'
+                'source: {"url": "https://example.com/design"}\n'
+                'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                'relations: []\n'
+                'aliases: ["website design"]\n'
+                'status: "active"\n'
+                "---\n\n# Design Taste\n",
+                encoding="utf-8",
+            )
+            (skills / "broken.md").write_text(
+                "---\n"
+                'id: "skill.broken"\n'
+                'type: "skill"\n'
+                'title: "Broken Relation"\n'
+                'description: "A card with an unresolved relation."\n'
+                'tags: ["domain:web-design"]\n'
+                'source: {"raw_path": "raw/sources/broken.md"}\n'
+                'dates: {"added_at": "2026-07-21T10:00:00+03:00", "updated_at": "2026-07-21T10:00:00+03:00"}\n'
+                'relations: [{"type": "related-to", "target": "skill.missing"}]\n'
+                'aliases: []\n'
+                'status: "active"\n'
+                "---\n\n# Broken Relation\n",
+                encoding="utf-8",
+            )
+            run("rebuild_content_index.py", project)
+            result = run(
+                "query_content.py", project, "--type", "skill", "--tag", "domain:web-design", "--added-since", "2026-07-21"
+            )
+            self.assertIn("Broken Relation", result.stdout)
+            self.assertNotIn("Design Taste", result.stdout)
+            text_result = run("query_content.py", project, "--text", "context engineering")
+            self.assertIn("Design Taste", text_result.stdout)
+            lint = run("lint_content.py", project, check=False)
+            self.assertNotEqual(lint.returncode, 0)
+            self.assertIn("unresolved relation", lint.stderr)
+
+    def test_migration_adds_metadata_without_rewriting_card_body(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            card = project / "wiki" / "skills" / "design.md"
+            card.parent.mkdir()
+            card.write_text("# Design Skill\n\nUseful interface guidance.\n", encoding="utf-8")
+            run("migrate_content_cards.py", project)
+            content = card.read_text(encoding="utf-8")
+            self.assertTrue(content.startswith("---\n"))
+            self.assertIn('type: "skill"', content)
+            self.assertTrue(content.endswith("# Design Skill\n\nUseful interface guidance.\n"))
+
+    def test_migration_keeps_nested_index_pages_as_knowledge_cards(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            card = project / "wiki" / "skills" / "index.md"
+            card.parent.mkdir()
+            card.write_text("# Skills\n", encoding="utf-8")
+            run("migrate_content_cards.py", project)
+            self.assertTrue(card.read_text(encoding="utf-8").startswith("---\n"))
+
+    def test_migration_classifies_skill_entities_as_skills(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            card = project / "wiki" / "entities" / "design.md"
+            card.parent.mkdir()
+            card.write_text("# Design\n\nType: skill / interface design\n", encoding="utf-8")
+            run("migrate_content_cards.py", project)
+            self.assertIn('type: "skill"', card.read_text(encoding="utf-8"))
+
+    def test_migration_refresh_types_repairs_existing_card_without_rewriting_body(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            card = project / "wiki" / "entities" / "design.md"
+            card.parent.mkdir()
+            card.write_text(
+                "---\n"
+                'id: "entities.design"\n'
+                'type: "concept"\n'
+                'title: "Design"\n'
+                'description: "Existing card."\n'
+                'tags: ["domain:web-design"]\n'
+                'source: {"wiki_path": "wiki/entities/design.md"}\n'
+                'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                'relations: []\n'
+                'aliases: []\n'
+                'status: "active"\n'
+                "---\n\n# Design\n\nType: skill / interface design\n",
+                encoding="utf-8",
+            )
+            run("migrate_content_cards.py", project, "--refresh-types")
+            content = card.read_text(encoding="utf-8")
+            self.assertIn('type: "skill"', content)
+            self.assertIn('description: "Existing card."', content)
+            self.assertTrue(content.endswith("# Design\n\nType: skill / interface design\n"))
+
     def test_repo_scoped_install_smoke(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp) / "project"
@@ -88,6 +196,11 @@ class MemoryCliTests(unittest.TestCase):
                 "files_changed": [{"path": "scripts/lint_memory.py", "action": "created"}],
                 "tags": ["activity:implementation", "component:memory", "file:scripts/lint_memory.py"],
                 "verification": [{"command": "python -m unittest", "result": "passed"}],
+                "decisions": ["Keep raw evidence immutable."],
+                "open_tasks": ["Add project cards."],
+                "blockers": [],
+                "next_actions": ["Review the generated handoff."],
+                "relevant_pages": ["wiki/index.md"],
             }
             payload_file = project / "session.json"
             payload_file.write_text(json.dumps(payload), encoding="utf-8")
@@ -99,6 +212,10 @@ class MemoryCliTests(unittest.TestCase):
             self.assertEqual(len(index_rows), 1)
             self.assertEqual(json.loads(index_rows[0])["status"], "completed")
             run("lint_memory.py", project)
+            handoff = (project / "wiki" / "session-handoff.md").read_text(encoding="utf-8")
+            self.assertIn("Keep raw evidence immutable.", handoff)
+            self.assertIn("Add project cards.", handoff)
+            self.assertIn("Review the generated handoff.", handoff)
 
     def test_save_rejects_invalid_closed_tag_and_missing_required_fields(self):
         with tempfile.TemporaryDirectory() as tmp:

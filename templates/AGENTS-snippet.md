@@ -12,6 +12,9 @@ Add this to `AGENTS.md` when installing the skill.
 - Treat `/prompts:save-memory`, `$llm-wiki-session-memory`, `save memory`, `update wiki memory`, and `сохрани сессию` as memory-save triggers.
 - Keep `raw/sources/` and `raw/sessions/` immutable after creation.
 - Use `wiki/session-index.jsonl` only through the bundled scripts; do not edit it manually.
+- Give every maintained knowledge page a content-card header with `id`, `type`, `tags`, `source`, `dates`, `relations`, `aliases`, and `status`.
+- Use namespaced content tags such as `domain:web-design`, `capability:ui-design`, `workflow:implementation`, `topic:context-engineering`, and `tool:figma`.
+- After adding or changing cards, run `rebuild_content_index.py` and `lint_content.py`; never edit `wiki/content-index.jsonl` manually.
 
 When saving memory:
 

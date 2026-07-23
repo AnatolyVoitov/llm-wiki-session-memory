@@ -24,6 +24,15 @@ For Codex, run `python3 .agents/skills/llm-wiki-session-memory/scripts/install_c
 3. `wiki/`: maintained knowledge, sources, concepts, syntheses, index and log.
 4. `wiki/session-handoff.md`: short active context for the next chat.
 5. `wiki/session-index.jsonl`: derived index for deterministic recall; never edit it manually.
+6. `wiki/content-index.jsonl`: derived index for knowledge-card recall; never edit it manually.
+
+## Knowledge cards
+
+Every maintained knowledge page represents one searchable item. Add JSON-compatible YAML front matter matching [the content-card schema](references/content-card-schema.md): stable `id`, `type`, title, description, typed tags, source, dates, relations, aliases, and status.
+
+Use `type` for the kind of material: `skill`, `article`, `repository`, `tool`, `project`, `concept`, `source`, `synthesis`, `question`, `image`, or `diagram`. Use namespaced tags for facets such as `domain:web-design`, `capability:ui-design`, `workflow:implementation`, `topic:context-engineering`, and `tool:figma`.
+
+Relations create the local knowledge graph. Use stable card IDs with relationship types such as `related-to`, `complements`, `depends-on`, `derived-from`, `replaces`, and `applies-to`. `added_at` means when the item entered this Wiki; it supports questions about materials added last week. Keep original publication time separately as `published_at` when known.
 
 ## Startup
 
@@ -52,11 +61,22 @@ python3 .agents/skills/llm-wiki-session-memory/scripts/query_memory.py . --file 
 python3 .agents/skills/llm-wiki-session-memory/scripts/query_memory.py . --tag component:runtime --status blocked
 ```
 
+For knowledge cards, rebuild and query the separate content index:
+
+```text
+python3 .agents/skills/llm-wiki-session-memory/scripts/rebuild_content_index.py .
+python3 .agents/skills/llm-wiki-session-memory/scripts/lint_content.py .
+python3 .agents/skills/llm-wiki-session-memory/scripts/query_content.py . --type skill --tag domain:web-design
+python3 .agents/skills/llm-wiki-session-memory/scripts/query_content.py . --text "context engineering" --added-since 2026-07-16
+```
+
+For a pre-existing Wiki without card metadata, run `migrate_content_cards.py` once before rebuilding the index. It adds baseline metadata only to pages without front matter and turns existing `[[Wiki links]]` into `related-to` relations.
+
 ## Ingest, query, lint
 
 - **Ingest:** preserve new evidence under `raw/sources/`; summarize it, update linked Wiki pages and `wiki/index.md`, then append `wiki/log.md`.
 - **Query:** search `wiki/index.md` and maintained pages first. Use session queries for questions about past work, such as “what did I do yesterday?”
-- **Lint:** run `lint_memory.py` after saving a session and periodically inspect Wiki links, stale claims, contradictions and orphan pages.
+- **Lint:** run `lint_memory.py` after saving a session, then run `rebuild_content_index.py` and `lint_content.py` after adding or changing knowledge cards.
 
 ## Non-negotiable rules
 

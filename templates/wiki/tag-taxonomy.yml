@@ -1,5 +1,7 @@
-activity:
-  allowed: [research, implementation, debugging, refactoring, documentation, testing, planning, review, configuration]
-status:
-  allowed: [completed, partial, needs-review, blocked, abandoned]
-namespaces: [project, task, activity, component, file, topic, decision, status, source, person]
+session:
+  activity: [research, implementation, debugging, refactoring, documentation, testing, planning, review, configuration]
+  status: [completed, partial, needs-review, blocked, abandoned]
+content:
+  type: [skill, article, repository, tool, project, concept, source, synthesis, question, image, diagram]
+  status: [active, draft, archived, superseded]
+namespaces: [domain, capability, workflow, topic, tool, platform, language, project, task, activity, component, file, decision, status, source, person]

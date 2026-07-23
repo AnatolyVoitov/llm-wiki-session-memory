@@ -12,6 +12,23 @@ from bootstrap import bootstrap
 from wiki_memory import index_record, project_paths, render_session, session_id, slug, validate_session
 
 
+def handoff_section(title: str, items: list[str], fallback: str) -> list[str]:
+    lines = [f"## {title}", ""]
+    lines.extend(f"- {item}" for item in items) if items else lines.append(f"- {fallback}")
+    lines.append("")
+    return lines
+
+
+def render_handoff(data: dict, relative: str) -> str:
+    lines = ["# Session Handoff", "", "## Active Context", "", f"- Last session: `{relative}`", f"- Current objective: {data['task']}", ""]
+    lines.extend(handoff_section("Current Decisions", data.get("decisions", []), "No new decisions recorded."))
+    lines.extend(handoff_section("Open Tasks", data.get("open_tasks", []), "No open tasks recorded."))
+    lines.extend(handoff_section("Blockers", data.get("blockers", []), "No blockers recorded."))
+    lines.extend(handoff_section("Next Action", data.get("next_actions", []), "Review the latest session and continue only with verified context."))
+    lines.extend(handoff_section("Relevant Pages", data.get("relevant_pages", ["`wiki/index.md`"]), "`wiki/index.md`"))
+    return "\n".join(lines)
+
+
 def save(project: Path, payload: Path) -> Path:
     data = json.loads(payload.read_text(encoding="utf-8"))
     validate_session(data)
@@ -31,12 +48,7 @@ def save(project: Path, payload: Path) -> Path:
         f"- Raw: `{relative}`\n- Tags: {', '.join(f'`{tag}`' for tag in data['tags'])}\n"
         f"- Status: `{data['status']}`\n"
     )
-    paths["handoff"].write_text(
-        "# Session Handoff\n\n## Active Context\n\n"
-        f"- Last session: `{relative}`\n- Current objective: {data['task']}\n\n"
-        "## Next Action\n\n- Review open tasks from the latest session and continue only with verified context.\n",
-        encoding="utf-8",
-    )
+    paths["handoff"].write_text(render_handoff(data, relative), encoding="utf-8")
     return target.relative_to(project)
 
 

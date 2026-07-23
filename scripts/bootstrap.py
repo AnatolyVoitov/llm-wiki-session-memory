@@ -25,7 +25,7 @@ def bootstrap(project: Path) -> list[Path]:
         if not path.exists():
             path.mkdir(parents=True)
             created.append(path)
-    for relative in ("AGENTS.md", "wiki/index.md", "wiki/log.md", "wiki/session-handoff.md", "wiki/session-index.jsonl", "wiki/tag-taxonomy.yml", "commands/save-memory.md"):
+    for relative in ("AGENTS.md", "wiki/index.md", "wiki/log.md", "wiki/session-handoff.md", "wiki/session-index.jsonl", "wiki/content-index.jsonl", "wiki/tag-taxonomy.yml", "commands/save-memory.md"):
         target = project / relative
         source = TEMPLATES / relative
         if not target.exists():

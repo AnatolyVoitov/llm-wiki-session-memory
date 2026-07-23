@@ -8,7 +8,8 @@ It keeps evidence immutable, builds an agent-maintained Wiki, and makes past wor
 
 - safe bootstrap for raw sources, Wiki pages, active handoff and local indexes;
 - structured session metadata and controlled tags;
-- `save_memory.py`, `query_memory.py` and `lint_memory.py`;
+- metadata-rich knowledge cards with typed tags, dates, sources and graph relations;
+- `save_memory.py`, `query_memory.py`, `lint_memory.py`, `rebuild_content_index.py`, `query_content.py`, and `lint_content.py`;
 - templates for `AGENTS.md`, handoff, taxonomy and Codex `/prompts:save-memory`.
 
 ## Quick start

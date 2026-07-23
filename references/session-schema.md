@@ -21,3 +21,5 @@ Required fields:
 ```
 
 `status` must be `completed`, `partial`, `needs-review`, `blocked`, or `abandoned`. Timestamps require ISO 8601 offsets. `files_changed` requires a path and action per item. Never include secrets, credentials, personal data, or private chain-of-thought.
+
+Optional lists `decisions`, `open_tasks`, `blockers`, `next_actions`, and `relevant_pages` are rendered into `wiki/session-handoff.md`. Use concise durable statements; do not include private reasoning.
