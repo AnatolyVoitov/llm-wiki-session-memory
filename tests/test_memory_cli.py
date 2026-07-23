@@ -23,6 +23,103 @@ def run(script, *args, check=True):
 
 
 class MemoryCliTests(unittest.TestCase):
+    def write_card(self, project, identifier, card_type, relations):
+        path = project / "wiki" / "cards" / f"{identifier.replace('.', '-')}.md"
+        path.parent.mkdir(exist_ok=True)
+        path.write_text(
+            "---\n"
+            "schema_version: 2\n"
+            f'id: "{identifier}"\n'
+            f'type: "{card_type}"\n'
+            f'title: "{identifier}"\n'
+            'description: "A test knowledge card with a specific purpose."\n'
+            'tags: ["topic:testing"]\n'
+            f'source: {{"wiki_path": "{path.relative_to(project).as_posix()}"}}\n'
+            'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+            f"relations: {json.dumps(relations)}\n"
+            "aliases: []\n"
+            'status: "active"\n'
+            "---\n\n# Card\n",
+            encoding="utf-8",
+        )
+
+    def test_strict_lint_reports_duplicate_and_missing_symmetric_relations(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            self.write_card(project, "skill.first", "skill", [
+                {"type": "complements", "target": "skill.second"},
+                {"type": "complements", "target": "skill.second"},
+            ])
+            self.write_card(project, "skill.second", "skill", [])
+            run("rebuild_content_index.py", project)
+            result = run("lint_content.py", project, "--strict", check=False)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("duplicate-relation: duplicate relation from skill.first to skill.second", result.stderr)
+            self.assertIn("missing-symmetric-relation: missing complements relation from skill.second to skill.first", result.stderr)
+            self.assertEqual(result.stderr.count("missing-symmetric-relation: missing complements relation from skill.second to skill.first"), 1)
+
+    def test_strict_lint_reports_replaces_without_supported_inverse_type(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            self.write_card(project, "skill.new", "skill", [{"type": "replaces", "target": "skill.old"}])
+            self.write_card(project, "skill.old", "skill", [])
+            run("rebuild_content_index.py", project)
+            result = run("lint_content.py", project, "--strict", check=False)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("missing-inverse-relation: replaces relation from skill.new to skill.old has no supported replaced-by inverse", result.stderr)
+
+    def test_strict_lint_reports_isolated_important_card_but_not_entity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            self.write_card(project, "skill.isolated", "skill", [])
+            self.write_card(project, "entities.isolated", "entity", [])
+            run("rebuild_content_index.py", project)
+            result = run("lint_content.py", project, "--strict", check=False)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("isolated-important-card: important card has no relations (skill.isolated)", result.stderr)
+            self.assertNotIn("entities.isolated", result.stderr)
+
+    def test_related_to_query_returns_incoming_and_outgoing_neighbors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            self.write_card(project, "project.target", "project", [{"type": "depends-on", "target": "concept.outgoing"}])
+            self.write_card(project, "concept.outgoing", "concept", [])
+            self.write_card(project, "source.incoming", "source", [{"type": "supports", "target": "project.target"}])
+            run("rebuild_content_index.py", project)
+            result = run("query_content.py", project, "--related-to", "project.target")
+            self.assertEqual(result.stdout.splitlines(), ["outgoing | depends-on | concept.outgoing", "incoming | supports | source.incoming"])
+
+    def test_complements_query_includes_reciprocal_relation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            self.write_card(project, "skill.requested", "skill", [])
+            self.write_card(project, "skill.recommends", "skill", [{"type": "complements", "target": "skill.requested"}])
+            run("rebuild_content_index.py", project)
+            result = run("query_content.py", project, "--complements", "skill.requested")
+            self.assertEqual(result.stdout.splitlines(), ["incoming | complements | skill.recommends"])
+
+    def test_graph_query_rejects_unknown_card_and_malformed_relation_data(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            self.write_card(project, "skill.valid", "skill", [])
+            run("rebuild_content_index.py", project)
+            unknown = run("query_content.py", project, "--related-to", "skill.missing", check=False)
+            self.assertNotEqual(unknown.returncode, 0)
+            self.assertIn("unknown card id: skill.missing", unknown.stderr)
+            index = project / "wiki" / "content-index.jsonl"
+            record = json.loads(index.read_text(encoding="utf-8"))
+            record["relations"] = [{"type": "complements"}]
+            index.write_text(json.dumps(record) + "\n", encoding="utf-8")
+            malformed = run("query_content.py", project, "--complements", "skill.valid", check=False)
+            self.assertNotEqual(malformed.returncode, 0)
+            self.assertIn("malformed relation on card skill.valid", malformed.stderr)
+
     def test_v2_card_accepts_entity_type_and_semantic_relation(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp)

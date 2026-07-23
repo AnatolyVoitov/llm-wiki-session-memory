@@ -11,6 +11,10 @@ from pathlib import Path
 from wiki_memory import build_content_index, project_paths
 
 
+SYMMETRIC_RELATIONS = {"complements", "related-to"}
+IMPORTANT_TYPES = {"skill", "project", "source", "repository", "concept", "synthesis"}
+
+
 def lint(project: Path) -> list[str]:
     try:
         expected = build_content_index(project)
@@ -34,10 +38,37 @@ def lint(project: Path) -> list[str]:
     return errors
 
 
+def graph_errors(project: Path) -> list[str]:
+    try:
+        records = build_content_index(project)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        return [str(exc)]
+    edges = {(record["id"], relation["type"], relation["target"]) for record in records for relation in record["relations"]}
+    connected = {source for source, _, _ in edges} | {target for _, _, target in edges}
+    errors = []
+    for record in records:
+        identifier = record["id"]
+        seen = set()
+        for relation in record["relations"]:
+            edge = (relation["type"], relation["target"])
+            if edge in seen:
+                errors.append(f"duplicate-relation: duplicate relation from {identifier} to {relation['target']}")
+                continue
+            seen.add(edge)
+            if relation["type"] in SYMMETRIC_RELATIONS and (relation["target"], relation["type"], identifier) not in edges:
+                errors.append(f"missing-symmetric-relation: missing {relation['type']} relation from {relation['target']} to {identifier}")
+            if relation["type"] == "replaces" and (relation["target"], "replaced-by", identifier) not in edges:
+                errors.append(f"missing-inverse-relation: replaces relation from {identifier} to {relation['target']} has no supported replaced-by inverse")
+        if record["type"] in IMPORTANT_TYPES and identifier not in connected:
+            errors.append(f"isolated-important-card: important card has no relations ({identifier})")
+    return errors
+
+
 def strict_errors(project: Path) -> list[str]:
     from audit_content import audit
 
-    return [f"{item['code']}: {item['message']} ({item['card_id']})" for item in audit(project) if item["severity"] == "error"]
+    audit_errors = [f"{item['code']}: {item['message']} ({item['card_id']})" for item in audit(project) if item["severity"] == "error"]
+    return graph_errors(project) + audit_errors
 
 
 def main() -> None:

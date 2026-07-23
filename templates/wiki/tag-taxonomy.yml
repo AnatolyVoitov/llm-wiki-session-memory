@@ -7,3 +7,9 @@ content:
   status: [active, draft, archived, superseded]
   relations: [related-to, complements, depends-on, derived-from, applies-to, replaces, references, contains, describes, supports]
 namespaces: [domain, capability, workflow, topic, tool, platform, language, project, task, activity, component, file, decision, status, source, person]
+
+inverse_relation_rules:
+  complements: {kind: symmetric, reverse_type: complements}
+  related-to: {kind: symmetric, reverse_type: related-to, status: legacy-supported}
+  replaces: {kind: diagnostic, reverse_type: replaced-by, status: not-yet-supported}
+  directed: [depends-on, derived-from, applies-to, contains, describes, supports, references]

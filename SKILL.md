@@ -34,6 +34,8 @@ Use `type` for the kind of material: `skill`, `article`, `repository`, `tool`, `
 
 Relations create the local knowledge graph. Use stable card IDs with relationship types such as `references`, `contains`, `describes`, `supports`, `complements`, `depends-on`, `derived-from`, `replaces`, and `applies-to`. `added_at` means when the item entered this Wiki; it supports questions about materials added last week. Keep original publication time separately as `published_at` when known.
 
+`complements` and legacy `related-to` are symmetric and must be explicitly stored on both cards; strict lint reports missing reverse links but never creates them. All other current relation types are directed. `replaces` reports the absent future `replaced-by` inverse as a diagnostic until that vocabulary entry is added.
+
 New and curated cards use `schema_version: 2`. Existing v1 cards remain readable until they are upgraded with `migrate_content_cards.py --upgrade-schema`.
 
 ## Startup
@@ -70,6 +72,8 @@ python3 .agents/skills/llm-wiki-session-memory/scripts/rebuild_content_index.py 
 python3 .agents/skills/llm-wiki-session-memory/scripts/lint_content.py .
 python3 .agents/skills/llm-wiki-session-memory/scripts/query_content.py . --type skill --tag domain:web-design
 python3 .agents/skills/llm-wiki-session-memory/scripts/query_content.py . --text "context engineering" --added-since 2026-07-16
+python3 .agents/skills/llm-wiki-session-memory/scripts/query_content.py . --related-to projects.example
+python3 .agents/skills/llm-wiki-session-memory/scripts/query_content.py . --complements skill.example
 ```
 
 Audit and curate card quality without broad rewrites:

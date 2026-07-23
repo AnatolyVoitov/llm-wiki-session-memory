@@ -28,6 +28,12 @@ Run `audit_content.py` to identify weak metadata, create a review file with `pro
 
 `status` must be one of: `active`, `draft`, `archived`, `superseded`.
 
+## Relation rules
+
+`complements` and legacy `related-to` are symmetric: strict lint requires the target card to store the same relation back. `replaces` is directed; strict lint reports that its future `replaced-by` inverse is unavailable, but never writes it. `derived-from`, `depends-on`, `applies-to`, `contains`, `describes`, `supports`, and `references` are directed and require no reverse edge.
+
+Graph queries are read-only: `query_content.py <project> --related-to <card-id>` lists all direct incoming and outgoing neighbors, and `--complements <card-id>` lists direct complementary cards in either stored direction.
+
 `source` needs at least one of `url`, `raw_path`, `repository`, or `wiki_path` for internally authored pages. `dates` needs `added_at` and `updated_at` with ISO 8601 timezone offsets. `published_at` and `last_verified_at` are optional.
 
 Use stable namespaced tags. The core namespaces are `domain`, `capability`, `workflow`, `topic`, `tool`, `platform`, `language`, `project`, `component`, `source`, and `person`.
