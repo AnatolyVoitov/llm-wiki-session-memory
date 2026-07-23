@@ -4,6 +4,7 @@ Every maintained content page uses JSON-compatible YAML front matter. This keeps
 
 ```yaml
 ---
+schema_version: 2
 id: "skill.design-taste-frontend"
 type: "skill"
 title: "Design Taste Frontend"
@@ -19,7 +20,9 @@ status: "active"
 
 Required fields are `id`, `type`, `title`, `description`, `tags`, `source`, `dates`, `relations`, `aliases`, and `status`.
 
-`type` must be one of: `skill`, `article`, `repository`, `tool`, `project`, `concept`, `source`, `synthesis`, `question`, `image`, `diagram`.
+Cards without `schema_version` are treated as legacy v1 cards during migration. New and curated cards must use `schema_version: 2`.
+
+`type` must be one of: `skill`, `article`, `repository`, `tool`, `project`, `concept`, `source`, `synthesis`, `question`, `image`, `diagram`, `document`. Version 2 relation types are `related-to`, `complements`, `depends-on`, `derived-from`, `applies-to`, and `replaces`.
 
 `status` must be one of: `active`, `draft`, `archived`, `superseded`.
 

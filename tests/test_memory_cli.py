@@ -23,6 +23,57 @@ def run(script, *args, check=True):
 
 
 class MemoryCliTests(unittest.TestCase):
+    def test_v2_card_rejects_unknown_relation_type(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            card = project / "wiki" / "skills" / "design.md"
+            card.parent.mkdir()
+            card.write_text(
+                "---\n"
+                'schema_version: 2\n'
+                'id: "skill.design"\n'
+                'type: "skill"\n'
+                'title: "Design"\n'
+                'description: "Website design guidance."\n'
+                'tags: ["domain:web-design"]\n'
+                'source: {"url": "https://example.com/design"}\n'
+                'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                'relations: [{"type": "guesses-about", "target": "skill.other"}]\n'
+                'aliases: []\n'
+                'status: "active"\n'
+                "---\n\n# Design\n",
+                encoding="utf-8",
+            )
+            result = run("rebuild_content_index.py", project, check=False)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("relation type", result.stderr)
+
+    def test_v1_card_remains_indexable_with_explicit_v1_record(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            card = project / "wiki" / "skills" / "design.md"
+            card.parent.mkdir()
+            card.write_text(
+                "---\n"
+                'id: "skill.design"\n'
+                'type: "skill"\n'
+                'title: "Design"\n'
+                'description: "Website design guidance."\n'
+                'tags: ["domain:web-design"]\n'
+                'source: {"url": "https://example.com/design"}\n'
+                'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                'relations: []\n'
+                'aliases: []\n'
+                'status: "active"\n'
+                "---\n\n# Design\n",
+                encoding="utf-8",
+            )
+            run("rebuild_content_index.py", project)
+            record = json.loads((project / "wiki" / "content-index.jsonl").read_text(encoding="utf-8"))
+            self.assertEqual(record["schema_version"], 1)
+
     def test_content_index_query_and_lint(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp)
