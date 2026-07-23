@@ -23,7 +23,7 @@ def finding(card: dict, path: Path, severity: str, code: str, message: str) -> d
 
 def audit(project: Path) -> list[dict]:
     findings = []
-    title_paths: dict[str, Path] = {}
+    title_paths: dict[str, list[tuple[Path, dict]]] = {}
     for path, card in content_cards(project):
         relative = path.relative_to(project)
         if content_schema_version(card) == 1:
@@ -41,10 +41,18 @@ def audit(project: Path) -> list[dict]:
         if card["type"] in {"article", "repository", "source"} and set(card["source"]) == {"wiki_path"}:
             findings.append(finding(card, relative, "error", "missing-external-source", "Add the source URL, repository, or raw path when known."))
         title = card["title"].strip().lower()
-        if title in title_paths:
-            findings.append(finding(card, relative, "suggestion", "duplicate-title", f"Title duplicates {title_paths[title].relative_to(project)}."))
-        else:
-            title_paths[title] = path
+        prior = title_paths.setdefault(title, [])
+        duplicate = next(
+            (
+                prior_path
+                for prior_path, prior_card in prior
+                if prior_card["type"] == card["type"] and prior_card["source"] == card["source"]
+            ),
+            None,
+        )
+        if duplicate:
+            findings.append(finding(card, relative, "suggestion", "duplicate-title", f"Title duplicates {duplicate.relative_to(project)}."))
+        prior.append((path, card))
     return findings
 
 

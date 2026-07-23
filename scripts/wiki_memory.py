@@ -17,9 +17,12 @@ ACTIVITIES = {"research", "implementation", "debugging", "refactoring", "documen
 STATUSES = {"completed", "partial", "needs-review", "blocked", "abandoned"}
 SCHEMA_VERSION = 2
 SUPPORTED_SCHEMA_VERSIONS = {1, 2}
-CONTENT_TYPES = {"skill", "article", "repository", "tool", "project", "concept", "source", "synthesis", "question", "image", "diagram", "document"}
+CONTENT_TYPES = {"skill", "article", "repository", "tool", "project", "entity", "concept", "source", "synthesis", "question", "image", "diagram", "document"}
 CONTENT_STATUSES = {"active", "draft", "archived", "superseded"}
-RELATION_TYPES = {"related-to", "complements", "depends-on", "derived-from", "applies-to", "replaces"}
+RELATION_TYPES = {
+    "related-to", "complements", "depends-on", "derived-from", "applies-to", "replaces",
+    "references", "contains", "describes", "supports",
+}
 CONTENT_REQUIRED_FIELDS = ("id", "type", "title", "description", "tags", "source", "dates", "relations", "aliases", "status")
 TAG_NAMESPACES = {"project", "task", "activity", "component", "file", "topic", "decision", "status", "source", "person"}
 CONTENT_TAG_NAMESPACES = TAG_NAMESPACES | {"domain", "capability", "workflow", "tool", "platform", "language"}

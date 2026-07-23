@@ -30,9 +30,9 @@ For Codex, run `python3 .agents/skills/llm-wiki-session-memory/scripts/install_c
 
 Every maintained knowledge page represents one searchable item. Add JSON-compatible YAML front matter matching [the content-card schema](references/content-card-schema.md): stable `id`, `type`, title, description, typed tags, source, dates, relations, aliases, and status.
 
-Use `type` for the kind of material: `skill`, `article`, `repository`, `tool`, `project`, `concept`, `source`, `synthesis`, `question`, `image`, or `diagram`. Use namespaced tags for facets such as `domain:web-design`, `capability:ui-design`, `workflow:implementation`, `topic:context-engineering`, and `tool:figma`.
+Use `type` for the kind of material: `skill`, `article`, `repository`, `tool`, `project`, `entity`, `concept`, `source`, `synthesis`, `question`, `image`, `diagram`, or `document`. Use namespaced tags for facets such as `domain:web-design`, `capability:ui-design`, `workflow:implementation`, `topic:context-engineering`, and `tool:figma`.
 
-Relations create the local knowledge graph. Use stable card IDs with relationship types such as `related-to`, `complements`, `depends-on`, `derived-from`, `replaces`, and `applies-to`. `added_at` means when the item entered this Wiki; it supports questions about materials added last week. Keep original publication time separately as `published_at` when known.
+Relations create the local knowledge graph. Use stable card IDs with relationship types such as `references`, `contains`, `describes`, `supports`, `complements`, `depends-on`, `derived-from`, `replaces`, and `applies-to`. `added_at` means when the item entered this Wiki; it supports questions about materials added last week. Keep original publication time separately as `published_at` when known.
 
 New and curated cards use `schema_version: 2`. Existing v1 cards remain readable until they are upgraded with `migrate_content_cards.py --upgrade-schema`.
 

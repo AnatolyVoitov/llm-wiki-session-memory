@@ -3,7 +3,7 @@ session:
   activity: [research, implementation, debugging, refactoring, documentation, testing, planning, review, configuration]
   status: [completed, partial, needs-review, blocked, abandoned]
 content:
-  type: [skill, article, repository, tool, project, concept, source, synthesis, question, image, diagram, document]
+  type: [skill, article, repository, tool, project, entity, concept, source, synthesis, question, image, diagram, document]
   status: [active, draft, archived, superseded]
-  relations: [related-to, complements, depends-on, derived-from, applies-to, replaces]
+  relations: [related-to, complements, depends-on, derived-from, applies-to, replaces, references, contains, describes, supports]
 namespaces: [domain, capability, workflow, topic, tool, platform, language, project, task, activity, component, file, decision, status, source, person]

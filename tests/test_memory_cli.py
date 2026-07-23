@@ -23,6 +23,56 @@ def run(script, *args, check=True):
 
 
 class MemoryCliTests(unittest.TestCase):
+    def test_v2_card_accepts_entity_type_and_semantic_relation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            card = project / "wiki" / "entities" / "design.md"
+            card.parent.mkdir()
+            card.write_text(
+                "---\n"
+                'schema_version: 2\n'
+                'id: "entities.design"\n'
+                'type: "entity"\n'
+                'title: "Design"\n'
+                'description: "Metadata for the Design skill."\n'
+                'tags: ["domain:web-design"]\n'
+                'source: {"wiki_path": "wiki/entities/design.md"}\n'
+                'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                'relations: [{"type": "describes", "target": "skill.design"}]\n'
+                'aliases: []\n'
+                'status: "active"\n'
+                "---\n\n# Design\n",
+                encoding="utf-8",
+            )
+            run("rebuild_content_index.py", project)
+
+    def test_audit_allows_same_title_for_distinct_documents(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            for identifier, source in (("skill.design", "wiki/skills/design.md"), ("skill.design-copy", "wiki/skills/design-copy.md")):
+                path = project / source
+                path.parent.mkdir(exist_ok=True)
+                path.write_text(
+                    "---\n"
+                    'schema_version: 2\n'
+                    f'id: "{identifier}"\n'
+                    'type: "skill"\n'
+                    'title: "Design"\n'
+                    'description: "Website design guidance."\n'
+                    'tags: ["domain:web-design"]\n'
+                    f'source: {{"wiki_path": "{source}"}}\n'
+                    'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                    'relations: []\n'
+                    'aliases: []\n'
+                    'status: "active"\n'
+                    "---\n\n# Design\n",
+                    encoding="utf-8",
+                )
+            findings = json.loads(run("audit_content.py", project, "--format", "json").stdout)
+            self.assertNotIn("duplicate-title", {item["code"] for item in findings})
+
     def test_v2_card_rejects_unknown_relation_type(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp)

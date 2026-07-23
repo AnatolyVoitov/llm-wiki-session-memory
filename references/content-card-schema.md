@@ -24,7 +24,7 @@ Cards without `schema_version` are treated as legacy v1 cards during migration. 
 
 Run `audit_content.py` to identify weak metadata, create a review file with `propose_content_curation.py`, and use `apply_content_curation.py --approve <card-id>` only after reviewing the proposed update. The audit and proposal commands do not modify cards.
 
-`type` must be one of: `skill`, `article`, `repository`, `tool`, `project`, `concept`, `source`, `synthesis`, `question`, `image`, `diagram`, `document`. Version 2 relation types are `related-to`, `complements`, `depends-on`, `derived-from`, `applies-to`, and `replaces`.
+`type` must be one of: `skill`, `article`, `repository`, `tool`, `project`, `entity`, `concept`, `source`, `synthesis`, `question`, `image`, `diagram`, `document`. Version 2 relation types are `related-to`, `references`, `contains`, `describes`, `supports`, `complements`, `depends-on`, `derived-from`, `applies-to`, and `replaces`.
 
 `status` must be one of: `active`, `draft`, `archived`, `superseded`.
 
