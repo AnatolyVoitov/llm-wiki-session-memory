@@ -15,8 +15,11 @@ REQUIRED_FIELDS = (
 OPTIONAL_SESSION_LIST_FIELDS = ("decisions", "open_tasks", "blockers", "next_actions", "relevant_pages")
 ACTIVITIES = {"research", "implementation", "debugging", "refactoring", "documentation", "testing", "planning", "review", "configuration"}
 STATUSES = {"completed", "partial", "needs-review", "blocked", "abandoned"}
-CONTENT_TYPES = {"skill", "article", "repository", "tool", "project", "concept", "source", "synthesis", "question", "image", "diagram"}
+SCHEMA_VERSION = 2
+SUPPORTED_SCHEMA_VERSIONS = {1, 2}
+CONTENT_TYPES = {"skill", "article", "repository", "tool", "project", "concept", "source", "synthesis", "question", "image", "diagram", "document"}
 CONTENT_STATUSES = {"active", "draft", "archived", "superseded"}
+RELATION_TYPES = {"related-to", "complements", "depends-on", "derived-from", "applies-to", "replaces"}
 CONTENT_REQUIRED_FIELDS = ("id", "type", "title", "description", "tags", "source", "dates", "relations", "aliases", "status")
 TAG_NAMESPACES = {"project", "task", "activity", "component", "file", "topic", "decision", "status", "source", "person"}
 CONTENT_TAG_NAMESPACES = TAG_NAMESPACES | {"domain", "capability", "workflow", "tool", "platform", "language"}
@@ -82,6 +85,9 @@ def validate_content(data: dict) -> None:
     missing = [field for field in CONTENT_REQUIRED_FIELDS if field not in data or data[field] in (None, "")]
     if missing:
         raise ValueError("missing content fields: " + ", ".join(missing))
+    schema_version = content_schema_version(data)
+    if schema_version not in SUPPORTED_SCHEMA_VERSIONS:
+        raise ValueError("content schema_version must be one of: " + ", ".join(map(str, sorted(SUPPORTED_SCHEMA_VERSIONS))))
     if not isinstance(data["id"], str) or not re.fullmatch(r"[a-z0-9][a-z0-9.-]*", data["id"]):
         raise ValueError("content id must use lowercase letters, digits, dots, or hyphens")
     if data["type"] not in CONTENT_TYPES:
@@ -103,6 +109,8 @@ def validate_content(data: dict) -> None:
             raise ValueError(f"content {field} must include a timezone offset")
     if not isinstance(data["relations"], list) or not all(isinstance(row, dict) and row.get("type") and row.get("target") for row in data["relations"]):
         raise ValueError("content relations must be a list of {type, target} objects")
+    if schema_version == SCHEMA_VERSION and any(row["type"] not in RELATION_TYPES for row in data["relations"]):
+        raise ValueError("content relation type must be one of: " + ", ".join(sorted(RELATION_TYPES)))
     if not isinstance(data["aliases"], list) or not all(isinstance(alias, str) for alias in data["aliases"]):
         raise ValueError("content aliases must be a list of strings")
 
@@ -113,6 +121,10 @@ def validate_content_tag(tag: str) -> None:
     namespace, value = tag.split(":", 1)
     if namespace not in CONTENT_TAG_NAMESPACES or not value or not TAG_VALUE.fullmatch(value):
         raise ValueError(f"invalid content tag: {tag}")
+
+
+def content_schema_version(data: dict) -> int:
+    return data.get("schema_version", 1)
 
 
 def content_cards(project: Path) -> list[tuple[Path, dict]]:
@@ -128,6 +140,7 @@ def content_cards(project: Path) -> list[tuple[Path, dict]]:
 
 def content_record(data: dict, relative_path: str) -> dict:
     return {
+        "schema_version": content_schema_version(data),
         "id": data["id"],
         "type": data["type"],
         "title": data["title"],
@@ -152,6 +165,27 @@ def build_content_index(project: Path) -> list[dict]:
         identifiers.add(record["id"])
         records.append(record)
     return records
+
+
+def write_content_index(project: Path) -> list[dict]:
+    records = build_content_index(project)
+    project_paths(project)["content_index"].write_text(
+        "".join(json.dumps(record, ensure_ascii=False) + "\n" for record in records),
+        encoding="utf-8",
+    )
+    return records
+
+
+def render_content_frontmatter(data: dict) -> str:
+    return "---\n" + "\n".join(f"{key}: {json.dumps(value, ensure_ascii=False)}" for key, value in data.items()) + "\n---\n\n"
+
+
+def content_body(path: Path) -> str:
+    content = path.read_text(encoding="utf-8")
+    close = content.find("\n---\n", 4)
+    if close < 0:
+        raise ValueError(f"{path} has unclosed metadata front matter")
+    return content[close + 5:]
 
 
 def slug(value: str) -> str:

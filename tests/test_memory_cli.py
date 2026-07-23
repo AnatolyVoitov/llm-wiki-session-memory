@@ -23,6 +23,215 @@ def run(script, *args, check=True):
 
 
 class MemoryCliTests(unittest.TestCase):
+    def test_v2_card_rejects_unknown_relation_type(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            card = project / "wiki" / "skills" / "design.md"
+            card.parent.mkdir()
+            card.write_text(
+                "---\n"
+                'schema_version: 2\n'
+                'id: "source.design"\n'
+                'type: "source"\n'
+                'title: "Design"\n'
+                'description: "Website design guidance."\n'
+                'tags: ["domain:web-design"]\n'
+                'source: {"url": "https://example.com/design"}\n'
+                'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                'relations: [{"type": "guesses-about", "target": "skill.other"}]\n'
+                'aliases: []\n'
+                'status: "active"\n'
+                "---\n\n# Design\n",
+                encoding="utf-8",
+            )
+            result = run("rebuild_content_index.py", project, check=False)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("relation type", result.stderr)
+
+    def test_v1_card_remains_indexable_with_explicit_v1_record(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            card = project / "wiki" / "skills" / "design.md"
+            card.parent.mkdir()
+            card.write_text(
+                "---\n"
+                'id: "source.design"\n'
+                'type: "source"\n'
+                'title: "Design"\n'
+                'description: "Website design guidance."\n'
+                'tags: ["domain:web-design"]\n'
+                'source: {"url": "https://example.com/design"}\n'
+                'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                'relations: []\n'
+                'aliases: []\n'
+                'status: "active"\n'
+                "---\n\n# Design\n",
+                encoding="utf-8",
+            )
+            run("rebuild_content_index.py", project)
+            record = json.loads((project / "wiki" / "content-index.jsonl").read_text(encoding="utf-8"))
+            self.assertEqual(record["schema_version"], 1)
+
+    def test_schema_upgrade_adds_v2_without_rewriting_card_body(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            body = "# Design\n\nExisting content.\n"
+            card = project / "wiki" / "skills" / "design.md"
+            card.parent.mkdir()
+            card.write_text(
+                "---\n"
+                'id: "source.design"\n'
+                'type: "source"\n'
+                'title: "Design"\n'
+                'description: "Website design guidance."\n'
+                'tags: ["domain:web-design"]\n'
+                'source: {"url": "https://example.com/design"}\n'
+                'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                'relations: []\n'
+                'aliases: []\n'
+                'status: "active"\n'
+                "---\n\n" + body,
+                encoding="utf-8",
+            )
+            run("migrate_content_cards.py", project, "--upgrade-schema")
+            content = card.read_text(encoding="utf-8")
+            self.assertIn("schema_version: 2", content)
+            self.assertTrue(content.endswith(body))
+
+    def test_schema_upgrade_is_idempotent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            card = project / "wiki" / "skills" / "design.md"
+            card.parent.mkdir()
+            card.write_text(
+                "---\n"
+                'id: "skill.design"\n'
+                'type: "skill"\n'
+                'title: "Design"\n'
+                'description: "Website design guidance."\n'
+                'tags: ["domain:web-design"]\n'
+                'source: {"url": "https://example.com/design"}\n'
+                'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                'relations: []\n'
+                'aliases: []\n'
+                'status: "active"\n'
+                "---\n\n# Design\n",
+                encoding="utf-8",
+            )
+            run("migrate_content_cards.py", project, "--upgrade-schema")
+            first = card.read_text(encoding="utf-8")
+            run("migrate_content_cards.py", project, "--upgrade-schema")
+            self.assertEqual(card.read_text(encoding="utf-8"), first)
+
+    def test_audit_reports_weak_metadata_without_mutating_card(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            card = project / "wiki" / "skills" / "design.md"
+            card.parent.mkdir()
+            card.write_text(
+                "---\n"
+                'schema_version: 2\n'
+                'id: "source.design"\n'
+                'type: "source"\n'
+                'title: "Design"\n'
+                'description: "Maintained source card: Design."\n'
+                'tags: ["topic:design"]\n'
+                'source: {"wiki_path": "wiki/sources/design.md"}\n'
+                'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                'relations: [{"type": "related-to", "target": "skill.other"}]\n'
+                'aliases: []\n'
+                'status: "active"\n'
+                "---\n\n# Design\n",
+                encoding="utf-8",
+            )
+            before = card.read_text(encoding="utf-8")
+            result = run("audit_content.py", project, "--format", "json")
+            findings = json.loads(result.stdout)
+            codes = {finding["code"] for finding in findings}
+            self.assertTrue({"generic-description", "generated-only-tags", "generic-relation", "missing-external-source"} <= codes)
+            self.assertEqual(card.read_text(encoding="utf-8"), before)
+            strict = run("lint_content.py", project, "--strict", check=False)
+            self.assertNotEqual(strict.returncode, 0)
+            self.assertIn("missing-external-source", strict.stderr)
+
+    def test_curation_proposal_does_not_modify_cards(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            card = project / "wiki" / "skills" / "design.md"
+            card.parent.mkdir()
+            card.write_text(
+                "---\n"
+                'schema_version: 2\n'
+                'id: "skill.design"\n'
+                'type: "skill"\n'
+                'title: "Design"\n'
+                'description: "Maintained skill card: Design."\n'
+                'tags: ["topic:design"]\n'
+                'source: {"url": "https://example.com/design"}\n'
+                'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                'relations: []\n'
+                'aliases: []\n'
+                'status: "active"\n'
+                "---\n\n# Design\n",
+                encoding="utf-8",
+            )
+            before = card.read_text(encoding="utf-8")
+            proposal = project / "wiki" / "curation" / "proposal.json"
+            run("propose_content_curation.py", project, "--output", proposal)
+            self.assertTrue(proposal.exists())
+            self.assertIn("skill.design", proposal.read_text(encoding="utf-8"))
+            self.assertEqual(card.read_text(encoding="utf-8"), before)
+
+    def test_apply_curation_changes_only_explicitly_approved_ids(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            skills = project / "wiki" / "skills"
+            skills.mkdir()
+            for identifier in ("design", "other"):
+                (skills / f"{identifier}.md").write_text(
+                    "---\n"
+                    'schema_version: 2\n'
+                    f'id: "skill.{identifier}"\n'
+                    'type: "skill"\n'
+                    f'title: "{identifier.title()}"\n'
+                    'description: "Useful guidance."\n'
+                    'tags: ["topic:skills"]\n'
+                    f'source: {{"wiki_path": "wiki/skills/{identifier}.md"}}\n'
+                    'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                    'relations: []\n'
+                    'aliases: []\n'
+                    'status: "active"\n'
+                    "---\n\n# Card\n",
+                    encoding="utf-8",
+                )
+            proposal = project / "proposal.json"
+            proposal.write_text(
+                json.dumps(
+                    {
+                        "proposal_version": 1,
+                        "updates": [
+                            {"id": "skill.design", "tags": ["domain:web-design"], "aliases": ["website design"]},
+                            {"id": "skill.other", "tags": ["domain:ai-agents"]},
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            run("apply_content_curation.py", project, proposal, "--approve", "skill.design")
+            design = (skills / "design.md").read_text(encoding="utf-8")
+            other = (skills / "other.md").read_text(encoding="utf-8")
+            self.assertIn("domain:web-design", design)
+            self.assertIn("website design", design)
+            self.assertNotIn("domain:ai-agents", other)
+            run("lint_content.py", project)
+
     def test_content_index_query_and_lint(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp)
@@ -171,6 +380,7 @@ class MemoryCliTests(unittest.TestCase):
                 "wiki/sources",
                 "wiki/concepts",
                 "wiki/syntheses",
+                "wiki/curation",
                 "wiki/index.md",
                 "wiki/log.md",
                 "wiki/session-handoff.md",
@@ -179,6 +389,7 @@ class MemoryCliTests(unittest.TestCase):
                 "commands/save-memory.md",
             ):
                 self.assertTrue((project / item).exists(), item)
+            self.assertIn("schema_version: 2", (project / "wiki/tag-taxonomy.yml").read_text(encoding="utf-8"))
 
     def test_save_creates_tagged_session_and_lint_accepts_it(self):
         with tempfile.TemporaryDirectory() as tmp:

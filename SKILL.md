@@ -34,6 +34,8 @@ Use `type` for the kind of material: `skill`, `article`, `repository`, `tool`, `
 
 Relations create the local knowledge graph. Use stable card IDs with relationship types such as `related-to`, `complements`, `depends-on`, `derived-from`, `replaces`, and `applies-to`. `added_at` means when the item entered this Wiki; it supports questions about materials added last week. Keep original publication time separately as `published_at` when known.
 
+New and curated cards use `schema_version: 2`. Existing v1 cards remain readable until they are upgraded with `migrate_content_cards.py --upgrade-schema`.
+
 ## Startup
 
 1. Read `AGENTS.md`, `wiki/index.md`, then `wiki/session-handoff.md`.
@@ -69,6 +71,17 @@ python3 .agents/skills/llm-wiki-session-memory/scripts/lint_content.py .
 python3 .agents/skills/llm-wiki-session-memory/scripts/query_content.py . --type skill --tag domain:web-design
 python3 .agents/skills/llm-wiki-session-memory/scripts/query_content.py . --text "context engineering" --added-since 2026-07-16
 ```
+
+Audit and curate card quality without broad rewrites:
+
+```text
+python3 .agents/skills/llm-wiki-session-memory/scripts/audit_content.py . --format markdown
+python3 .agents/skills/llm-wiki-session-memory/scripts/propose_content_curation.py . --output wiki/curation/proposal.json
+python3 .agents/skills/llm-wiki-session-memory/scripts/apply_content_curation.py . wiki/curation/proposal.json --approve skill.design-taste-frontend
+python3 .agents/skills/llm-wiki-session-memory/scripts/lint_content.py . --strict
+```
+
+`propose_content_curation.py` never changes cards. Review and edit its JSON proposal before applying. `apply_content_curation.py` changes only IDs passed through `--approve`.
 
 For a pre-existing Wiki without card metadata, run `migrate_content_cards.py` once before rebuilding the index. It adds baseline metadata only to pages without front matter and turns existing `[[Wiki links]]` into `related-to` relations.
 
