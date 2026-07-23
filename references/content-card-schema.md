@@ -24,13 +24,13 @@ Cards without `schema_version` are treated as legacy v1 cards during migration. 
 
 Run `audit_content.py` to identify weak metadata, create a review file with `propose_content_curation.py`, and use `apply_content_curation.py --approve <card-id>` only after reviewing the proposed update. The audit and proposal commands do not modify cards.
 
-`type` must be one of: `skill`, `article`, `repository`, `tool`, `project`, `entity`, `concept`, `source`, `synthesis`, `question`, `image`, `diagram`, `document`. Version 2 relation types are `related-to`, `references`, `contains`, `describes`, `supports`, `complements`, `depends-on`, `derived-from`, `applies-to`, and `replaces`.
+`type` must be one of: `skill`, `article`, `repository`, `tool`, `project`, `entity`, `concept`, `source`, `synthesis`, `question`, `image`, `diagram`, `document`. Version 2 relation types are `related-to`, `references`, `contains`, `describes`, `supports`, `complements`, `depends-on`, `derived-from`, `applies-to`, `replaces`, and `replaced-by`.
 
 `status` must be one of: `active`, `draft`, `archived`, `superseded`.
 
 ## Relation rules
 
-`complements` and legacy `related-to` are symmetric: strict lint requires the target card to store the same relation back. `replaces` is directed; strict lint reports that its future `replaced-by` inverse is unavailable, but never writes it. `derived-from`, `depends-on`, `applies-to`, `contains`, `describes`, `supports`, and `references` are directed and require no reverse edge.
+`complements` and legacy `related-to` are symmetric: strict lint requires the target card to store the same relation back. `replaces` and `replaced-by` are reciprocal: strict lint requires the target card to store the corresponding inverse, but never writes it. `derived-from`, `depends-on`, `applies-to`, `contains`, `describes`, `supports`, and `references` are directed and require no reverse edge.
 
 Graph queries are read-only: `query_content.py <project> --related-to <card-id>` lists all direct incoming and outgoing neighbors, and `--complements <card-id>` lists direct complementary cards in either stored direction.
 
