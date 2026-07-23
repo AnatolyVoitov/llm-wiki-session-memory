@@ -9,6 +9,8 @@
 
 ## Sources and Wiki
 
+- `raw/sources/`, `raw/sessions/`, and `raw/assets/` are immutable evidence.
+- Store curated asset cards under `wiki/assets/`; use explicit media curation proposals before editing an article.
 - `raw/sources/` and `raw/sessions/` are immutable evidence.
 - `wiki/` is derived, maintained knowledge. Keep it concise, cross-linked, and grounded in raw evidence.
 - Use `wiki/log.md` as compact audit, not as startup context.
