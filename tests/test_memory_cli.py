@@ -74,6 +74,59 @@ class MemoryCliTests(unittest.TestCase):
             record = json.loads((project / "wiki" / "content-index.jsonl").read_text(encoding="utf-8"))
             self.assertEqual(record["schema_version"], 1)
 
+    def test_schema_upgrade_adds_v2_without_rewriting_card_body(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            body = "# Design\n\nExisting content.\n"
+            card = project / "wiki" / "skills" / "design.md"
+            card.parent.mkdir()
+            card.write_text(
+                "---\n"
+                'id: "skill.design"\n'
+                'type: "skill"\n'
+                'title: "Design"\n'
+                'description: "Website design guidance."\n'
+                'tags: ["domain:web-design"]\n'
+                'source: {"url": "https://example.com/design"}\n'
+                'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                'relations: []\n'
+                'aliases: []\n'
+                'status: "active"\n'
+                "---\n\n" + body,
+                encoding="utf-8",
+            )
+            run("migrate_content_cards.py", project, "--upgrade-schema")
+            content = card.read_text(encoding="utf-8")
+            self.assertIn("schema_version: 2", content)
+            self.assertTrue(content.endswith(body))
+
+    def test_schema_upgrade_is_idempotent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            run("bootstrap.py", project)
+            card = project / "wiki" / "skills" / "design.md"
+            card.parent.mkdir()
+            card.write_text(
+                "---\n"
+                'id: "skill.design"\n'
+                'type: "skill"\n'
+                'title: "Design"\n'
+                'description: "Website design guidance."\n'
+                'tags: ["domain:web-design"]\n'
+                'source: {"url": "https://example.com/design"}\n'
+                'dates: {"added_at": "2026-07-20T10:00:00+03:00", "updated_at": "2026-07-20T10:00:00+03:00"}\n'
+                'relations: []\n'
+                'aliases: []\n'
+                'status: "active"\n'
+                "---\n\n# Design\n",
+                encoding="utf-8",
+            )
+            run("migrate_content_cards.py", project, "--upgrade-schema")
+            first = card.read_text(encoding="utf-8")
+            run("migrate_content_cards.py", project, "--upgrade-schema")
+            self.assertEqual(card.read_text(encoding="utf-8"), first)
+
     def test_content_index_query_and_lint(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp)

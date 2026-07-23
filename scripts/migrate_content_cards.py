@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 from bootstrap import bootstrap
-from wiki_memory import read_frontmatter, slug
+from wiki_memory import SCHEMA_VERSION, read_frontmatter, slug
 
 
 STRUCTURAL_FILES = {"index.md", "log.md", "source-manifest.md", "session-handoff.md"}
@@ -104,9 +104,9 @@ def body_after_frontmatter(content: str) -> str:
     return content[close + 5:]
 
 
-def migrate(project: Path, refresh_types: bool = False) -> list[Path]:
+def migrate(project: Path, refresh_types: bool = False, upgrade_schema: bool = False) -> list[Path]:
     bootstrap(project)
-    paths = candidates(project, include_metadata=refresh_types)
+    paths = candidates(project, include_metadata=refresh_types or upgrade_schema)
     ids = {path.resolve(): card_id(project, path) for path in paths}
     migrated = []
     for path in paths:
@@ -116,8 +116,14 @@ def migrate(project: Path, refresh_types: bool = False) -> list[Path]:
         content_type = card_type(project, path, body)
         if existing:
             metadata = read_frontmatter(path)
-            if metadata.get("type") != content_type:
+            changed = False
+            if refresh_types and metadata.get("type") != content_type:
                 metadata["type"] = content_type
+                changed = True
+            if upgrade_schema and "schema_version" not in metadata:
+                metadata = {"schema_version": SCHEMA_VERSION, **metadata}
+                changed = True
+            if changed:
                 path.write_text(render_metadata(metadata) + body, encoding="utf-8")
                 migrated.append(path.relative_to(project))
             continue
@@ -150,8 +156,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("project", type=Path)
     parser.add_argument("--refresh-types", action="store_true", help="correct inferred types on existing cards without changing other metadata")
+    parser.add_argument("--upgrade-schema", action="store_true", help="add schema_version 2 to existing cards without changing other metadata")
     args = parser.parse_args()
-    for path in migrate(args.project.resolve(), refresh_types=args.refresh_types):
+    for path in migrate(args.project.resolve(), refresh_types=args.refresh_types, upgrade_schema=args.upgrade_schema):
         print(path)
 
 
