@@ -32,9 +32,9 @@ Every maintained knowledge page represents one searchable item. Add JSON-compati
 
 Use `type` for the kind of material: `skill`, `article`, `repository`, `tool`, `project`, `entity`, `concept`, `source`, `synthesis`, `question`, `image`, `diagram`, or `document`. Use namespaced tags for facets such as `domain:web-design`, `capability:ui-design`, `workflow:implementation`, `topic:context-engineering`, and `tool:figma`.
 
-Relations create the local knowledge graph. Use stable card IDs with relationship types such as `references`, `contains`, `describes`, `supports`, `complements`, `depends-on`, `derived-from`, `replaces`, and `applies-to`. `added_at` means when the item entered this Wiki; it supports questions about materials added last week. Keep original publication time separately as `published_at` when known.
+Relations create the local knowledge graph. Use stable card IDs with relationship types such as `references`, `contains`, `describes`, `supports`, `complements`, `depends-on`, `derived-from`, `replaces`, `replaced-by`, and `applies-to`. `added_at` means when the item entered this Wiki; it supports questions about materials added last week. Keep original publication time separately as `published_at` when known.
 
-`complements` and legacy `related-to` are symmetric and must be explicitly stored on both cards; strict lint reports missing reverse links but never creates them. All other current relation types are directed. `replaces` reports the absent future `replaced-by` inverse as a diagnostic until that vocabulary entry is added.
+`complements` and legacy `related-to` are symmetric and must be explicitly stored on both cards; strict lint reports missing reverse links but never creates them. `replaces` and `replaced-by` are reciprocal and must store their corresponding inverse. All other current relation types are directed.
 
 New and curated cards use `schema_version: 2`. Existing v1 cards remain readable until they are upgraded with `migrate_content_cards.py --upgrade-schema`.
 
